@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]  # Change this to your default branch
     paths:
-      - "Dockerfile"     # Runs only when the Dockerfile changes
+      - "dockerfile"     # Runs only when the Dockerfile changes
 
   workflow_dispatch:      # Allows manual execution
 
