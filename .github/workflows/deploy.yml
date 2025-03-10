@@ -1,0 +1,41 @@
+name: Deploy to GKE
+
+on:
+  push:
+    branches:
+      - main
+      - test
+
+env:
+  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+  GAR_LOCATION: us-central1
+  GAR_REPO: my-repo
+  GKE_CLUSTER: my-cluster
+  GKE_REGION: us-central1
+  DEPLOYMENT_NAME: my-app
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Authenticate with Google Cloud
+        uses: google-github-actions/auth@v1
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+
+      - name: Configure Docker
+        run: gcloud auth configure-docker $GAR_LOCATION-docker.pkg.dev
+
+      - name: Build and Push Docker Image
+        run: |
+          docker build -t $GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/$DEPLOYMENT_NAME:$GITHUB_SHA .
+          docker push $GAR_LOCATION-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/$DEPLOYMENT_NAME:$GITHUB_SHA
+
+      - name: Deploy to GKE
+        run: |
+          gcloud container clusters get-credentials $GKE_CLUSTER --region $GKE_REGION
+          kubectl apply -f k8s/deployment.yaml
+          kubectl apply -f k8s/service.yaml
