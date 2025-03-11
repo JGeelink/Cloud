@@ -25,14 +25,13 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v3
 
-    # Setup gcloud CLI
+    # Setup gcloud CLI # Authenticate with Google Cloud
     - id: 'auth'
       uses: 'google-github-actions/auth@v0'
       with:
         credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
-    # Configure Docker to use the gcloud command-line tool as a credential
-    # helper for authentication
+    # Configure Docker to use the gcloud CLI
     - name: Docker configuration
       run: |-
         gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://$GAR_ZONE-docker.pkg.dev
@@ -52,12 +51,12 @@ jobs:
           --build-arg GITHUB_SHA="$GITHUB_SHA" \
           --build-arg GITHUB_REF="$GITHUB_REF" \
           .
-    # Push the Docker image to Google Container Registry
+    # Push the Docker image to Google Registry
     - name: Publish
       run: |-
         docker push "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/$IMAGE:$IMAGE_TAG"
 
-    # Deploy the Docker image to the GKE cluster
+    # Deploy the Docker image to Google cluster
     - name: Deploy
       run: |-
         kubectl apply -f deploy.yml
