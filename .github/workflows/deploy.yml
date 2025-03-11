@@ -13,7 +13,7 @@ env:
   GAR_ZONE: us-central1  # Replace with your artifact registry zone
   GAR_REPO: my-repo  # Replace with your artifact registry repo
   IMAGE: my-app  # Image name
-  IMAGE_TAG: blue #image tag
+  IMAGE_TAG: blue # Image tag
 
 jobs:
   setup-build-publish-deploy:
