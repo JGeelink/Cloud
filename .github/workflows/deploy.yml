@@ -9,10 +9,10 @@ on:
 env:
   PROJECT_ID: ${{ secrets.SECRETS_GCP_PROJECT_ID }}
   GKE_CLUSTER: my-cluster    # cluster name
-  GKE_ZONE: europe-west1-b   # cluster zone
+  GKE_ZONE: us-central1   # cluster zone
   IMAGE: micro # image name
   IMAGE_TAG: green # image tag
-  GAR_ZONE: europe-west1 # artifact registry zone
+  GAR_ZONE: us-central1 # artifact registry zone
   GAR_REPO:  my-repo # artifact registry repository
 
 jobs:
