@@ -13,6 +13,7 @@ env:
   GAR_ZONE: us-central1  # Replace with your artifact registry zone
   GAR_REPO: my-repo  # Replace with your artifact registry repo
   IMAGE: my-app  # Image name
+  IMAGE_TAG: blue #image tag
 
 jobs:
   setup-build-publish-deploy:
@@ -30,6 +31,12 @@ jobs:
       with:
         credentials_json: '${{ secrets.GCP_SA_KEY }}'
 
+    # Configure Docker to use the gcloud command-line tool as a credential
+    # helper for authentication
+    - name: Docker configuration
+      run: |-
+        gcloud auth print-access-token | docker login -u oauth2accesstoken --password-stdin https://$GAR_ZONE-docker.pkg.dev
+
       # Configure Docker to use Google Artifact Registry
     - name: Configure Docker for GAR
       run: gcloud auth configure-docker $GAR_ZONE-docker.pkg.dev
@@ -40,32 +47,23 @@ jobs:
       with:
         cluster_name: ${{ env.GKE_CLUSTER }}
         location: ${{ env.GKE_ZONE }}
+        
+    # Build the Docker image
+    - name: Build
+      run: |-
+        docker build \
+          --tag "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/$IMAGE:$IMAGE_TAG" \
+          --build-arg GITHUB_SHA="$GITHUB_SHA" \
+          --build-arg GITHUB_REF="$GITHUB_REF" \
+          .
+    # Push the Docker image to Google Container Registry
+    - name: Publish
+      run: |-
+        docker push "$GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/$IMAGE:$IMAGE_TAG"
 
-      # Determine Deployment Version
-    - name: Set Deployment Tag
-      id: set-tag
-      run: |
-        if [[ "${{ github.ref_name }}" == "main" ]]; then
-          echo "DEPLOY_TAG=blue" >> $GITHUB_ENV
-        else
-          echo "DEPLOY_TAG=green" >> $GITHUB_ENV
-        fi
-
-      # Build and Push Docker Image
-    - name: Build and Push Docker Image
-      run: |
-        docker build -t $GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/$IMAGE:$DEPLOY_TAG .
-        docker push $GAR_ZONE-docker.pkg.dev/$PROJECT_ID/$GAR_REPO/$IMAGE:$DEPLOY_TAG
-
-      # Deploy to Kubernetes
-    - name: Deploy to GKE
-      run: |
-        kubectl apply -f k8s/deployment-$DEPLOY_TAG.yml
-        kubectl apply -f k8s/service.yml
-
-      # Verify Deployment
-    - name: Check Deployments
-      run: kubectl get deployments
-
-    - name: Check Running Pods
-      run: kubectl get pods
+    # Deploy the Docker image to the GKE cluster
+    - name: Deploy
+      run: |-
+        kubectl apply -f deploy.yml
+        kubectl get pods
+        kubectl rollout restart deployment blue-deployment
